@@ -18,8 +18,8 @@
 #include <avr/interrupt.h>
 
 //this will be a problem bc longs are 8 bits
-double depth = 0;
-double temp = 0; 
+int depth = 0;
+int temp = 0; 
 
 long seconds = 0;
 long minutes = 0;
@@ -103,14 +103,14 @@ void measure() { //gets sensor raw values and converts them to depth and tempera
 	//TODO: read ADC result
 	
 	//dummy values so i dont get compiler errors for now:
-	double D1 = 0;
-	double D2 = 0;
+	unsigned int D1 = 0;
+	unsigned int D2 = 0;
 	//the calculations they give us on the datasheet
-	double dT = D2 = calibration_coeffs[5] * pow(2, 8);
-	temp = 2000 + dT * calibration_coeffs[6] / pow(2, 23);
-	double off = calibration_coeffs[2] * pow(2,16) + (calibration_coeffs[4] * dT) / pow(2,7);
-	double sens = calibration_coeffs[1] * pow(2, 15) + (calibration_coeffs[3] * dT) / pow(2,8);
-	double pressure = (D1 * sens / pow(2, 21) - off) / pow(2,15);
+	int dT = calibration_coeffs[5] * pow(2, 8);
+	int temp = 2000 + dT * calibration_coeffs[6] / pow(2, 23);
+	long off = calibration_coeffs[2] * pow(2,16) + (calibration_coeffs[4] * dT) / pow(2,7);
+	long sens = calibration_coeffs[1] * pow(2, 15) + (calibration_coeffs[3] * dT) / pow(2,8);
+	int pressure = (D1 * sens / pow(2, 21) - off) / pow(2,15);
 	//conversion to nicer units
 	temp /= 100; //temp is now in C
 	depth = (pressure * 10000) / assumed_water_density / g;//in meters
