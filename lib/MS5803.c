@@ -28,7 +28,7 @@ void reset(void) {
 
 
 uint16_t readProm(uint8_t promNmbr) {
-	// Prom number is 0-7
+	// Prom number is 1-6 (0 and 7 are used by the device)
 	uint8_t promAddr = 0xA0 + (promNmbr * 2);	
 
 	// If prom == 0, there was an  error
