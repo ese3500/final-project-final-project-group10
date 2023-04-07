@@ -2,51 +2,37 @@
 #include <avr/io.h>
 #include <stdbool.h>
 
-float waterVaporPressureValue = 0;
+float waterVaporPressureValue = 6000;//pa?
 int diveTime = 0;
-int depth = 0;
-int maxDepth = 0;
 float ascentRate = 0;
 //Default values
 float nitrogenRateInGas = 0.78;
 float seaLevelAtmosphericPressure = 1013.25;
 
 //Coefficients of the ZH-L16C-GF algorithm
-float halfTimes[16];
-float aValues[16];
-float bValues[16];
+float halfTimes[16] = {4.0, 8.0, 12.5, 18.5, 27.0, 38.3, 54.3, 77.0, 109.0, 146.0, 187.0, 239.0, 305.0, 390.0, 498.0, 635.0};
+float aValues[16] = {1.2599, 1.0000, 0.8618, 0.7562, 0.6200, 0.5043, 0.4410, 0.4000, 0.3750, 0.3500, 0.3295, 0.3065, 0.2835, 0.2610, 0.2480, 0.2327};
+float bValues[16] = {0.5050, 0.6514, 0.7222, 0.7825, 0.8126, 0.8434, 0.8693, 0.8910, 0.9092, 0.9222, 0.9319, 0.9403, 0.9477, 0.9544, 0.9602, 0.9653};
 float compartmentPPsN[16];
 
-void initializeCalculations(float waterVaporPressureCorrection_, int currentDepth) {
-	waterVaporPressureValue = waterVaporPressureCorrection_;
+void initializeCalculations() {
 	diveTime = 0;
-	depth = currentDepth;
-	maxDepth = depth;
 	
-	halfTimes = {4.0, 8.0, 12.5, 18.5, 27.0, 38.3, 54.3, 77.0, 109.0, 146.0, 187.0, 239.0, 305.0, 390.0, 498.0, 635.0};
-	aValues = {1.2599, 1.0000, 0.8618, 0.7562, 0.6200, 0.5043, 0.4410, 0.4000, 0.3750, 0.3500, 0.3295, 0.3065, 0.2835, 0.2610, 0.2480, 0.2327};
-	bValues = {0.5050, 0.6514, 0.7222, 0.7825, 0.8126, 0.8434, 0.8693, 0.8910, 0.9092, 0.9222, 0.9319, 0.9403, 0.9477, 0.9544, 0.9602, 0.9653};
-
 	//Initialize the compts with initial pp value
 	for (int i = 0; i < 16; i++) {
 		compartmentPPsN[i] = calculatePPLung(seaLevelAtmosphericPressure);
 	}
 
 }
-void updateParameters(int currentDepth, int newMaxDepth, int newDiveTime) {
-	diveTime = newDiveTime;
-	depth = currentDepth;
-	maxDepth = newMaxDepth;
-}
 int calculateDepthFromPressure(int pressure) {
-	int depthFt = 0;
+	int depth = 0;//in ft
 	if (pressure > seaLevelAtmosphericPressure) {
-		depthFt = (pressure - seaLevelAtmosphericPressure) / (9.80665 * 10.25) * 3.281;
+		depth = (pressure - seaLevelAtmosphericPressure) / (9.80665 * 10.25) * 3.281;
 	}
-	return depthFt;
+	return depth;
 }
-int calcaulteHydrostaticPressureFromDepth(int depth_) {
-	return seaLevelAtmosphericPressure + (9.80665 * 10.25 * depth_ / 3.281 * 100);
+int calcaulteHydrostaticPressureFromDepth(int depth) {
+	return seaLevelAtmosphericPressure + (9.80665 * 10.25 * depth / 3.281 * 100);
 }
 void setPPOfCompartment(int compartmentIdx, float pressure) {
 	compartmentPPsN[compartmentIdx] = pressure;
@@ -60,7 +46,10 @@ float calculateCompartmentPPOtherGasses(int timeSec, float compthalfTimeSec, flo
 float ascendToPPForCompt(int compartmentIdx, float comptPP) {
 	return (comptPP * bValues[compartmentIdx]) - (1000 * aValues[compartmentIdx] * bValues[compartmentIdx]);
 }
-int getNoDecoStopMinutes(int comptIdx, float currentPressure) {
+bool getDecoStopNeeded(float ascendToPP) {
+	return (ascendToPP > seaLevelAtmosphericPressure);
+}
+int getNoDecoStopMinutesIdx(int comptIdx, float currentPressure) {
 	int min = 0;
 	bool decoStopNeeded = false;
 	float comptPP;
@@ -71,8 +60,15 @@ int getNoDecoStopMinutes(int comptIdx, float currentPressure) {
 	}
 	return min;
 }
-bool getDecoStopNeeded(float ascendToPP) {
-	return ascendToPP > seaLevelAtmosphericPressure;
+int getNoDecoStopMinutes(float currentPressure) {
+	int maxDecoTime = 0;
+	for (int i = 0; i < 16; i++) {
+		int i_time = getNoDecoStopMinutesIdx(i, currentPressure);
+		if (maxDecoTime < i_time) {
+			maxDecoTime = i_time;
+		}
+	}
+	return maxDecoTime;
 }
 int minutesToTargetPressure(int targetPressure) {
 	float ascentCeilings[16];
@@ -106,16 +102,12 @@ float calculateAscentRate(int timeAtCurrentDepth, int previousDepth, int current
 	}
 	return 0;
 }
-void advance(float newPressure, int totalDiveTime) { //call every time there is a change in pressure
+void advanceCalculations(int oldDepth, int newPressure, int totalDiveTime) { //call every time there is a change in pressure
 
 	int timeSpentPrevPressure = totalDiveTime - diveTime; //seconds
 	if (timeSpentPrevPressure > 0) { //at least a second spent at that pressure
-		ascentRate = calculateAscentRate(timeSpentPrevPressure, depth, calculateDepthFromPressure(newPressure));
+		ascentRate = calculateAscentRate(timeSpentPrevPressure, oldDepth, calculateDepthFromPressure(newPressure));
 		diveTime = totalDiveTime;
-		depth = calculateDepthFromPressure(newPressure);
-		if (maxDepth < depth) {
-			maxDepth = depth;
-		}
 
 		bool decoNeeded[16];
 		int minToDecoNeeded[16];
@@ -155,6 +147,7 @@ void advance(float newPressure, int totalDiveTime) { //call every time there is 
 			}
 		} else {
 			//TODO: throw some error or alert because we're assuming a different dive profile
+			OCR0A = 142;
 		}
 	}
 }
