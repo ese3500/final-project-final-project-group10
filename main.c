@@ -9,6 +9,7 @@
 #define F_CPU 16000000UL
 
 #include "ST7735.h"
+#include "MS5803.h"
 #include "LCD_GFX.h"
 #include <stdbool.h>
 #include <stdlib.h>
@@ -46,7 +47,8 @@ int safetyStopLowDepth = 20;
 int safetyStopHighDepth = 15;
 
 //sensor reading related constants
-int calibration_coeffs[] = {0, 0, 0, 0, 0, 0};
+uint16_t calibration_coeffs[6];
+uint16_t serialCodeAndCRC;
 int water_density = 1023.6; //kg/m3 for saltwater
 double g = 9.80665; //m/s
 
@@ -54,9 +56,11 @@ char str[] = "holder";
 int timerInterruptsPerSecond = 2;
 
 void Initialize() {
-	lcd_init();
 
 	cli(); //disable global interrupts for setup
+	
+	lcd_init();
+	reset();//for sensor
 	
 	//timer 1 setup such that OCA is called twice per second
 	//set prescaler to 256
@@ -108,21 +112,23 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 void setCalibrationCoeffs() { //called once in the beginning
-	
+	for (int i = 0; i < 6; i++) {
+		calibration_coeffs[i] = readProm(i+1);
+	}
+	serialCodeAndCRC = readProm(7);
 }
 void measure() { //gets sensor raw values and converts them to depth and temperature
 	previousDepthReading = depth;
 	
-	//TODO: call for D1 conversion
-	//TODO: read ADC result
-	//TODO: call for D2 conversion
-	//TODO: read ADC result
+	unsigned int D1 = readPressure();
+	unsigned int D2 = readTemperature();
 	
 	//dummy values so i dont get compiler errors for now:
-	unsigned int D1 = 0;
-	unsigned int D2 = 0;
+	//unsigned int D1 = 0;
+	//unsigned int D2 = 0;
+
 	//the calculations they give us on the datasheet
-	int dT = calibration_coeffs[5] * pow(2, 8);
+	int dT = D2 - calibration_coeffs[5] * pow(2, 8);
 	int temp = 2000 + dT * calibration_coeffs[6] / pow(2, 23);
 	long off = calibration_coeffs[2] * pow(2,16) + (calibration_coeffs[4] * dT) / pow(2,7);
 	long sens = calibration_coeffs[1] * pow(2, 15) + (calibration_coeffs[3] * dT) / pow(2,8);
