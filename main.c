@@ -11,6 +11,7 @@
 #include "ST7735.h"
 #include "MS5803.h"
 #include "LCD_GFX.h"
+#include "Buhlman.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -61,6 +62,26 @@ void Initialize() {
 	
 	lcd_init();
 	reset();//for sensor
+
+	//timer 0 setup for passive buzzer at pin 6
+	DDRD |= (1<<DDD6); //set buzzer to output pin (PD6 = OC0A)
+	PORTD |= (1<<PORTD6); // set initially to low
+	
+	//timer 0 setup, sets pre scaler to 64
+	TCCR0B |= (1<<CS00);
+	TCCR0B |= (1<<CS01);
+	TCCR0B &= ~(1<<CS02);
+	
+	//set to phase correct PWM with settable TOP
+	TCCR0A |= (1<<WGM00);
+	TCCR0A &= ~(1<<WGM01);
+	TCCR0B |= (1<<WGM02);
+	
+	//toggle OC1A on compare match
+	TCCR0A |= (1<<COM0A0);
+	TCCR0A &= ~(1<<COM0A1);
+	
+	OCR0A = 0;//16*10^6 / 64 / (440*2*2) = 142
 	
 	//timer 1 setup such that OCA is called twice per second
 	//set prescaler to 256
@@ -77,10 +98,15 @@ void Initialize() {
 
 }
 
-// called every second
+// called every half second
 ISR(TIMER1_COMPA_vect) {
 	partialSecond ++;
 	OCR1A = (OCR1A + (62500/timerInterruptsPerSecond)) % 65536;
+	if (OCR0A == 142) {
+		OCR0A = 143;
+	} else if (OCR0A > 142;) {
+		OCR0A = 0;
+	}
 	if (!currentlyDiving) {
 		measure();
 		return;
@@ -136,8 +162,7 @@ void measure() { //gets sensor raw values and converts them to depth and tempera
 	//conversion to nicer units
 	temp /= 100; //temp is now in C
 	//TODO: verify that this works, may need to calibrate manually
-	depth = (pressure * 10000) / water_density / g;//in meters
-	depth = 3.28084 * depth; //depth is now in ft
+	depth = calculateDepthFromPressure(pressure);
 	handleNewMeasurements();
 }
 
@@ -172,6 +197,9 @@ void handleNewMeasurements() {
 			alertingAscentRate = 1;
 		}
 	}
+	if (previousDepthReading != depth) {
+		advanceCalculations(previousDepthReading, pressure, seconds + 60 * minutes + 60 * 60 * hours);
+	}
 	if (alertingAscentRate && previousDepthReading - depth <= 1) {
 		alertingAscentRate = 0;
 	}
@@ -185,11 +213,12 @@ void handleNewMeasurements() {
 }
 
 int calculateNoStopTime() {
-	
+	return getNoDecoStopMinutes(pressure);
 }
 
 void alert() {
-	//TODO: handle alert by beeping
+	//handle alert by beeping
+	OCR0A = 142;
 }
 
 void displayDiveScreen() {
@@ -208,7 +237,7 @@ void displayDiveScreen() {
 	sprintf(str, "%l max ft", maximumDepth);
 	LCD_drawString(0, 60, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
 	if (alertingAscentRate) {
-		//TODO: a visual alert i.e. a red boarder
+		//TODO: potentially include a visual alert i.e. a red boarder
 	}
 }
 
