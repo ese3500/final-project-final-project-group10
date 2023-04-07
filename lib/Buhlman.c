@@ -15,6 +15,10 @@ float aValues[16] = {1.2599, 1.0000, 0.8618, 0.7562, 0.6200, 0.5043, 0.4410, 0.4
 float bValues[16] = {0.5050, 0.6514, 0.7222, 0.7825, 0.8126, 0.8434, 0.8693, 0.8910, 0.9092, 0.9222, 0.9319, 0.9403, 0.9477, 0.9544, 0.9602, 0.9653};
 float compartmentPPsN[16];
 
+float calculatePPLung(float currentPressure) { //calculates the partial pressure of nitrogen in the lung
+	return (currentPressure - waterVaporPressureValue) * nitrogenRateInGas;
+}
+
 void initializeCalculations() {
 	diveTime = 0;
 	
@@ -36,9 +40,6 @@ int calcaulteHydrostaticPressureFromDepth(int depth) {
 }
 void setPPOfCompartment(int compartmentIdx, float pressure) {
 	compartmentPPsN[compartmentIdx] = pressure;
-}
-float calculatePPLung(float currentPressure) { //calculates the partial pressure of nitrogen in the lung
-	return (currentPressure - waterVaporPressureValue) * nitrogenRateInGas;
 }
 float calculateCompartmentPPOtherGasses(int timeSec, float compthalfTimeSec, float currentComptPPOtherGasses, float currentLungPPOtherGasses) {
 	return currentComptPPOtherGasses + (currentLungPPOtherGasses - currentComptPPOtherGasses) * (1 - pow(2, (-timeSec/compthalfTimeSec)));
@@ -122,7 +123,7 @@ void advanceCalculations(int oldDepth, int newPressure, int totalDiveTime) { //c
 			decoNeeded[i] = getDecoStopNeeded(ascentCeilings[i]);
 			if (!decoNeeded[i]) {
 				//Calculate minutes can be spent in the current depth
-				minToDecoNeeded[i] = minToDecoNeeded(i, newPressure);
+				minToDecoNeeded[i] = getNoDecoStopMinutesIdx(i, newPressure);
 			} else {
 				minToDecoNeeded[i] = 0;
 				//Calculate first deco stop
@@ -130,14 +131,14 @@ void advanceCalculations(int oldDepth, int newPressure, int totalDiveTime) { //c
 			}
 		}
 		//Calculate if DECO is needed for any of the compartments
-		bool decoNeeded = false;
+		bool decoNeededOverall = 0;
 		for (int i = 0; i < 16; i++) {
 			if (decoNeeded[i]) {
-				decoNeeded = true;
+				decoNeededOverall = 1;
 				break;
 			}
 		}
-		if (!decoNeeded) {
+		if (!decoNeededOverall) {
 			//finds smallest compartment time to deco
 			int minToDeco = minToDecoNeeded[0];
 			for (int i = 1; i < 16; i++) {
