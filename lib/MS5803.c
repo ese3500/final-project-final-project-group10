@@ -182,4 +182,3 @@ uint32_t readTemperature() {
 			return temperature;
 
 }
-
