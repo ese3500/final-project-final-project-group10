@@ -68,7 +68,7 @@ void Initialize() {
 	PORTD |= (1<<PORTD2); // set initially to low
 	
 	//setup output LED at pin 3
-	DDRD |= (1<<DDD3); //set buzzer to output pin (PD6 = OC0A)
+	DDRD |= (1<<DDD3); //set buzzer to output pin
 	PORTD |= (1<<PORTD3); // set initially to low
 	
 	//timer 1 setup such that OCA is called as many times per second as timerInterruptsPerSecond
@@ -88,13 +88,9 @@ void Initialize() {
 
 // called every half second
 ISR(TIMER1_COMPA_vect) {
+	//TODO: move everything out of the interrupt, just set a flag to run this
 	partialSecond ++;
 	OCR1A = (OCR1A + (62500/timerInterruptsPerSecond)) % 65536;
-	if (OCR0A == 142) {
-		OCR0A = 143;
-	} else if (OCR0A > 142;) {
-		OCR0A = 0;
-	}
 	if (!currentlyDiving) {
 		measure();
 		return;
