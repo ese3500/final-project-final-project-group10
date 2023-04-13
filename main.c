@@ -63,27 +63,15 @@ void Initialize() {
 	lcd_init();
 	reset();//for sensor
 
-	//timer 0 setup for passive buzzer at pin 6
-	DDRD |= (1<<DDD6); //set buzzer to output pin (PD6 = OC0A)
-	PORTD |= (1<<PORTD6); // set initially to low
+	//setup for active buzzer at pin 2
+	DDRD |= (1<<DDD2); //set buzzer to output pin
+	PORTD |= (1<<PORTD2); // set initially to low
 	
-	//timer 0 setup, sets pre scaler to 64
-	TCCR0B |= (1<<CS00);
-	TCCR0B |= (1<<CS01);
-	TCCR0B &= ~(1<<CS02);
+	//setup output LED at pin 3
+	DDRD |= (1<<DDD3); //set buzzer to output pin (PD6 = OC0A)
+	PORTD |= (1<<PORTD3); // set initially to low
 	
-	//set to phase correct PWM with settable TOP
-	TCCR0A |= (1<<WGM00);
-	TCCR0A &= ~(1<<WGM01);
-	TCCR0B |= (1<<WGM02);
-	
-	//toggle OC1A on compare match
-	TCCR0A |= (1<<COM0A0);
-	TCCR0A &= ~(1<<COM0A1);
-	
-	OCR0A = 0;//16*10^6 / 64 / (440*2*2) = 142
-	
-	//timer 1 setup such that OCA is called twice per second
+	//timer 1 setup such that OCA is called as many times per second as timerInterruptsPerSecond
 	//set prescaler to 256
 	TCCR0B &= ~(1<<CS00);
 	TCCR0B &= ~(1<<CS01);
@@ -132,8 +120,20 @@ ISR(TIMER1_COMPA_vect) {
 		}
 	}
 	measure();
-	if (alertingAscentRate || alertingNoStopTime) {
-		alert();
+	if (alertingNoStopTime) {
+		//turn on buzzer
+		PORTD &= ~(1<<PORTD2);
+		//turn on LED
+		PORTD &= ~(1<<PORTD3);
+	} else if (alertingAscentRate) {
+		//turn on buzzer
+		PORTD &= ~(1<<PORTD2);
+		//turn off LED
+		PORTD |= (1<<PORTD3);
+	} else {
+		//turn both off
+		PORTD |= (1<<PORTD2);
+		PORTD |= (1<<PORTD3);
 	}
 }
 
@@ -216,16 +216,16 @@ int calculateNoStopTime() {
 	return getNoDecoStopMinutes(pressure);
 }
 
-void alert() {
-	//handle alert by beeping
-	OCR0A = 142;
-}
 
 void displayDiveScreen() {
 	sprintf(str, "%l C", temp);
 	LCD_drawString(0, 0, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
 	sprintf(str, "%l ft", depth);
-	LCD_drawString(0, 10, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	if (alertingAscentRate) {
+		LCD_drawString(0, 10, str, rgb565(255, 0, 0), rgb565(255, 255, 255));
+	} else {
+		LCD_drawString(0, 10, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	}
 	sprintf(str, "%l pressure", pressure);
 	LCD_drawString(0, 20, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
 	sprintf(str, "%l hrs", hours);
@@ -236,8 +236,11 @@ void displayDiveScreen() {
 	LCD_drawString(0, 50, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
 	sprintf(str, "%l max ft", maximumDepth);
 	LCD_drawString(0, 60, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
-	if (alertingAscentRate) {
-		//TODO: potentially include a visual alert i.e. a red boarder
+	sprintf(str, "%u NST", noStopTime);
+	if (alertingNoStopTime) {
+		LCD_drawString(0, 70, str, rgb565(255, 0, 0), rgb565(255, 255, 255));
+	} else {
+		LCD_drawString(0, 70, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
 	}
 }
 
