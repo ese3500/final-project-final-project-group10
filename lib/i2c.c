@@ -1,4 +1,6 @@
-#include <i2c.h>
+#include <avr/io.h>
+
+#include "i2c.h"
 
 void i2cinit(void) {
 	TWSR = 0x00; // set prescaler to 1
@@ -31,7 +33,7 @@ uint8_t i2cWrite(uint8_t data) {
 uint8_t i2cReadAck(void) {
 	// Requires ACK bit as 9th bit
 	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA); // listen for transmission of data with ack bit
-	while (!(TWCR & (1 << TWINT))); // wait for TWINT flag set to have value finished 
+	while (!(TWCR & (1 << TWINT))); // wait for TWINT flag set to have value finished
 	return TWDR; // return received data
 }
 
