@@ -1,9 +1,14 @@
-void i2cinit(void);
+#include <avr/io.h>
 
-void i2cstart(void);
+void i2cinit();
 
-void i2cwrite(uint8_t data);
+void i2cStart();
 
-uint8_t i2cread(void);
+void i2cStop();
 
-void i2cstatus(void);
+uint8_t i2cWrite(uint8_t data);
+
+
+uint8_t i2cReadAck();
+
+uint8_t i2cStatus();
