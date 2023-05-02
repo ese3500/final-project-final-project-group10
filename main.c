@@ -20,8 +20,8 @@
 #include <avr/interrupt.h>
 
 // current dive parameters
-int depth = 0;
-int pressure = 0;
+float depth = 0;
+float pressure = 0;
 int temp = 0; 
 int maximumDepth = 0;
 bool inSafetyStop = 0;
@@ -49,12 +49,12 @@ int safetyStopHighDepth = 15;
 
 //sensor reading related constants
 uint16_t calibration_coeffs[6];
-uint16_t serialCodeAndCRC;
+//uint16_t serialCodeAndCRC;
 int water_density = 1023.6; //kg/m3 for saltwater
 double g = 9.80665; //m/s
 
 char str[] = "holder";
-int timerInterruptsPerSecond = 2;
+int timerInterruptsPerSecond = 1;
 
 void Initialize() {
 
@@ -116,6 +116,7 @@ ISR(TIMER1_COMPA_vect) {
 		}
 	}
 	measure();
+	
 	if (alertingNoStopTime) {
 		//turn on buzzer
 		PORTD &= ~(1<<PORTD2);
@@ -135,15 +136,17 @@ ISR(TIMER1_COMPA_vect) {
 
 void setCalibrationCoeffs() { //called once in the beginning
 	for (int i = 0; i < 6; i++) {
-		calibration_coeffs[i] = readProm(i+1);
+		//TODO: update
+		calibration_coeffs[i] = getPROMVal(0x76, i+1);
 	}
-	serialCodeAndCRC = readProm(7);
+	//serialCodeAndCRC = readProm(7);
 }
 void measure() { //gets sensor raw values and converts them to depth and temperature
 	previousDepthReading = depth;
 	
-	unsigned int D1 = readPressure();
-	unsigned int D2 = readTemperature();
+	//TODO: update
+	unsigned int D1 = getPressure(0x76);
+	unsigned int D2 = getTemperature(0x76);
 	
 	//dummy values so i dont get compiler errors for now:
 	//unsigned int D1 = 0;
@@ -154,10 +157,10 @@ void measure() { //gets sensor raw values and converts them to depth and tempera
 	int temp = 2000 + dT * calibration_coeffs[6] / pow(2, 23);
 	long off = calibration_coeffs[2] * pow(2,16) + (calibration_coeffs[4] * dT) / pow(2,7);
 	long sens = calibration_coeffs[1] * pow(2, 15) + (calibration_coeffs[3] * dT) / pow(2,8);
-	pressure = (D1 * sens / pow(2, 21) - off) / pow(2,15);
-	//conversion to nicer units
+	pressure = (D1 * sens / pow(2, 21) - off) / pow(2,15); //in 0.1mBar
+	pressure /= 10; //in mBar
+	pressure *= 100000; //in Pa
 	temp /= 100; //temp is now in C
-	//TODO: verify that this works, may need to calibrate manually
 	depth = calculateDepthFromPressure(pressure);
 	handleNewMeasurements();
 }
