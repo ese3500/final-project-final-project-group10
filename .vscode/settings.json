@@ -1,0 +1,9 @@
+{
+    "cmake.configureOnOpen": false,
+    "files.associations": {
+        "stdbool.h": "c",
+        "io.h": "c",
+        "delay.h": "c",
+        "ms5803.h": "c"
+    }
+}

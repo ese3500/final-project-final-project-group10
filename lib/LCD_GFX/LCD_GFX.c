@@ -7,6 +7,8 @@
 
 #include "LCD_GFX.h"
 #include "ST7735.h"
+#include <string.h>
+#include <math.h>
 
 /******************************************************************************
 * Local Functions
@@ -50,7 +52,7 @@ void LCD_drawChar(uint8_t x, uint8_t y, uint16_t character, uint16_t fColor, uin
 		for(i=0;i<5;i++){
 			uint8_t pixels = ASCII[row][i]; //Go through the list of pixels
 			for(j=0;j<8;j++){
-				if ((pixels>>j)&1==1){
+				if (((pixels>>j)&1)==1){
 					LCD_drawPixel(x+i,y+j,fColor);
 				}
 				else {
@@ -168,8 +170,82 @@ void LCD_setScreen(uint16_t color)
 *****************************************************************************/
 void LCD_drawString(uint8_t x, uint8_t y, char* str, uint16_t fg, uint16_t bg)
 {
-	int char_width = 5;
+	int char_width = 6;
 	for (int i = 0; i < strlen(str); i++) {
 		LCD_drawChar(x + char_width*i, y, str[i], fg, bg);
+	}
+}
+
+void LCD_drawBigString(uint8_t x, uint8_t y, char* str, uint16_t fColor, uint16_t bColor, uint8_t size) {
+	//only give strings of number characters
+	int char_width = 6 * size;
+	for (int i = 0; i < strlen(str); i++) {
+		if (str[i] >= '0' && str[i] <= '9') {
+			LCD_drawBigChar(x + char_width * i, y, str[i], fColor, bColor, size);
+		} else {
+			//LCD_drawChar(x + char_width * i, y, str[i], fColor, bColor);
+		}
+	}
+}
+
+void LCD_drawBigChar(uint8_t x, uint8_t y, uint16_t character, uint16_t fColor, uint16_t bColor, uint8_t size) {
+	//only draws numbers
+	character -= 48;
+	uint16_t c = character;
+	if (c != 1 && c != 4) {
+		LCD_drawBlock(x + size, y, x + size * 4, y + size + 1, fColor);
+	} else {
+		LCD_drawBlock(x + size, y, x + size * 4, y + size + 1, bColor);
+	}
+	if (c < 1 || (c > 3 && c != 7)) {
+		LCD_drawBlock(x, y + size, x + size, y + size * 4 + 1, fColor);
+	} else {
+		LCD_drawBlock(x, y + size, x + size, y + size * 4 + 1, bColor);
+	}
+	if (c != 5 && c != 6) {
+		LCD_drawBlock(x + size * 4, y + size, x + size * 5, y + size * 4 + 1, fColor);
+	} else {
+		LCD_drawBlock(x + size * 4, y + size, x + size * 5, y + size * 4 + 1, bColor);
+	}
+	if (c != 7 && c > 1) {
+		LCD_drawBlock(x + size, y + size * 4, x + size * 4, y + size * 5 + 1, fColor);
+	} else {
+		LCD_drawBlock(x + size, y + size * 4, x + size * 4, y + size * 5 + 1, bColor);
+	}
+	if (c == 0 || c == 2 || c == 6 || c == 8) {
+		LCD_drawBlock(x, y + size * 5, x + size, y + size * 8 + 1, fColor);
+	} else {
+		LCD_drawBlock(x, y + size * 5, x + size, y + size * 8 + 1, bColor);
+	}
+	if (c != 2) {
+		LCD_drawBlock(x + size * 4, y + size * 5, x + size * 5, y + size * 8 + 1, fColor);
+	} else {
+		LCD_drawBlock(x + size * 4, y + size * 5, x + size * 5, y + size * 8 + 1, bColor);
+	}
+	if (c != 1 && c != 4 && c != 7) {
+		LCD_drawBlock(x + size, y + size * 8, x + size * 4, y + size * 9 + 1, fColor);
+	} else {
+		LCD_drawBlock(x + size, y + size * 8, x + size * 4, y + size * 9 + 1, bColor);
+	}
+}
+	
+void LCD_drawBigIntLen(uint8_t x, uint8_t y, char* str, uint16_t fColor, uint16_t bColor, uint8_t size, uint8_t numDigits, uint8_t drawZero) {
+	//only give strings of number characters
+	int char_width = 6 * size;
+	int start = 0;
+	if (strlen(str) < numDigits) {
+		for (int i = 0; i < numDigits - strlen(str); i++) {
+			if (drawZero == 1) {
+				LCD_drawBigChar(x + char_width * i, y, '0', fColor, bColor, size);
+			}
+		}
+		start = numDigits - strlen(str);
+	}
+	for (int i = start; i < numDigits; i++) {
+		if (str[i-start] >= '0' && str[i-start] <= '9') {
+			LCD_drawBigChar(x + char_width * (i), y, str[i-start], fColor, bColor, size);
+		} else {
+			LCD_drawChar(x + char_width * (i), y, str[i-start], fColor, bColor);
+		}
 	}
 }

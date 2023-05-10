@@ -1,10 +1,3 @@
-/*
- * 350FinalProject.c
- *
- * Created: 4/3/2023 2:55:11 PM
- * Author : erica
- */ 
-
 #include <avr/io.h>
 #define F_CPU 16000000UL
 

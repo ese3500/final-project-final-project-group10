@@ -21,7 +21,7 @@
 #define LCD_DDR			DDRB
 #define LCD_DC			PORTB0
 #define LCD_RST			PORTB1
-#define LCD_TFT_CS		PORTB2
+#define LCD_TFT_CS		PORTD4
 #define LCD_MOSI		PORTB3
 #define LCD_SCK			PORTB5
 

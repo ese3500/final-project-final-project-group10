@@ -29,7 +29,8 @@
 static void lcd_pin_init(void)
 {
 	//Setup digital pins
-	LCD_DDR |= (1<<LCD_DC)|(1<<LCD_RST)|(1<<LCD_TFT_CS)|(1<<LCD_MOSI)|(1<<LCD_SCK);	//Set up output pins
+	LCD_DDR |= (1<<LCD_DC)|(1<<LCD_RST)|(1<<LCD_MOSI)|(1<<LCD_SCK);	//Set up output pins
+	DDRD |= (1<<LCD_TFT_CS);
 	LCD_LITE_DDR |= (1<<LCD_LITE);	//Set up output pins
 
 	//Setup PWM for LCD Backlight
@@ -78,11 +79,11 @@ void Delay_ms(unsigned int n)
 *****************************************************************************/
 void SPI_ControllerTx(uint8_t data)
 {
-	clear(LCD_PORT, LCD_TFT_CS);	//CS pulled low to start communication
+	clear(PORTD, LCD_TFT_CS);	//CS pulled low to start communication
 
 	SPI_ControllerTx_stream(data);
 
-	set(LCD_PORT, LCD_TFT_CS);	//set CS to high
+	set(PORTD, LCD_TFT_CS);	//set CS to high
 }
 
 /**************************************************************************//**
@@ -104,14 +105,14 @@ void SPI_ControllerTx_stream(uint8_t stream)
 void SPI_ControllerTx_16bit(uint16_t data)
 {
 	uint8_t temp = data >> 8;
-	clear(LCD_PORT, LCD_TFT_CS);	//CS pulled low to start communication
+	clear(PORTD, LCD_TFT_CS);	//CS pulled low to start communication
 	
 	SPDR = temp;		//Place data to be sent on registers
 	while(!(SPSR & (1<<SPIF)));	//wait for end of transmission
 	SPDR = data;		//Place data to be sent on registers
 	while(!(SPSR & (1<<SPIF)));	//wait for end of transmission
 	
-	set(LCD_PORT, LCD_TFT_CS);	//set CS to high
+	set(PORTD, LCD_TFT_CS);	//set CS to high
 }
 
 /**************************************************************************//**
@@ -184,7 +185,7 @@ void sendCommands (const uint8_t *cmds, uint8_t length)
 
 	numCommands = length;	// # of commands to send
 
-	clear(LCD_PORT, LCD_TFT_CS);	//CS pulled low to start communication
+	clear(PORTD, LCD_TFT_CS);	//CS pulled low to start communication
 
 	while (numCommands--)	// Send each command
 	{
@@ -208,7 +209,7 @@ void sendCommands (const uint8_t *cmds, uint8_t length)
 		}
 	}
 
-	set(LCD_PORT, LCD_TFT_CS);	//set CS to high
+	set(PORTD, LCD_TFT_CS);	//set CS to high
 }
 
 /**************************************************************************//**

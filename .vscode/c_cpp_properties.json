@@ -1,0 +1,78 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/include",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/src",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/avr_mmcp",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/pff",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/diskio",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/pffconf",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/MS5803",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/LCD_GFX",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/ST7735",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/ASCII_LUT",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/Buhlman",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/uart",
+                "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/twi",
+                "/Users/alxkp/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "/Users/alxkp/.platformio/packages/framework-arduino-avr/variants/standard",
+                "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/include",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/src",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/avr_mmcp",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/pff",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/diskio",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/pffconf",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/MS5803",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/LCD_GFX",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/ST7735",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/ASCII_LUT",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/Buhlman",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/uart",
+                    "/Users/alxkp/Software/School/ESE350/final-project-final-project-group10/lib/twi",
+                    "/Users/alxkp/.platformio/packages/framework-arduino-avr/cores/arduino",
+                    "/Users/alxkp/.platformio/packages/framework-arduino-avr/variants/standard",
+                    "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                    "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                    "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                    "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                    "/Users/alxkp/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60107",
+                "ARDUINO_AVR_UNO",
+                "F_CPU=16000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO=10808",
+                "__AVR_ATmega328P__",
+                ""
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "compilerPath": "/Users/alxkp/.platformio/packages/toolchain-atmelavr/bin/avr-gcc",
+            "compilerArgs": [
+                "-mmcu=atmega328p",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}
