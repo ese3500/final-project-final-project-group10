@@ -1,0 +1,209 @@
+#include <avr/io.h>
+#define F_CPU 16000000UL
+
+#include "ST7735.h"
+#include "LCD_GFX.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+// current dive parameters
+int depth = 0;
+int pressure = 0;
+int temp = 0; 
+int maximumDepth = 0;
+bool inSafetyStop = 0;
+bool requiresSafetyStop = 0;
+int safetyTimeLeft = 0;
+int previousDepthReading = 0;
+bool alertingAscentRate = 0;
+bool alertingNoStopTime = 0;
+int noStopTime = 100; //dummy start value so it doesn't start at 0
+
+//timing, since current dive started
+long seconds = 0;
+long minutes = 0;
+int hours = 0;
+int partialSecond = 0;
+
+//mode settings
+bool currentlyDiving = 1;
+
+//dive-related constants
+int safetyStopTime = 180;
+int requireSafetyStopAfterDepth = 30;
+int safetyStopLowDepth = 20;
+int safetyStopHighDepth = 15;
+
+//sensor reading related constants
+int calibration_coeffs[] = {0, 0, 0, 0, 0, 0};
+int water_density = 1023.6; //kg/m3 for saltwater
+double g = 9.80665; //m/s
+
+char str[] = "holder";
+int timerInterruptsPerSecond = 2;
+
+void Initialize() {
+	lcd_init();
+
+	cli(); //disable global interrupts for setup
+	
+	//timer 1 setup such that OCA is called twice per second
+	//set prescaler to 256
+	TCCR0B &= ~(1<<CS00);
+	TCCR0B &= ~(1<<CS01);
+	TCCR0B |= (1<<CS02);
+	//sets prescaler to 256
+	TIMSK1 |= (1<<OCIE1A);//enables output compare A
+	OCR1A = 62500/timerInterruptsPerSecond; //should be 62500 for 1s
+	
+	setCalibrationCoeffs();
+	
+	sei();//enable global interrupts
+
+}
+
+// called every second
+ISR(TIMER1_COMPA_vect) {
+	partialSecond ++;
+	OCR1A = (OCR1A + (62500/timerInterruptsPerSecond)) % 65536;
+	if (!currentlyDiving) {
+		measure();
+		return;
+	}
+	if (partialSecond == timerInterruptsPerSecond) {
+		partialSecond = 0;
+		seconds ++;
+		if (seconds == 60) {
+			minutes ++;
+			seconds = 0;
+			if (minutes == 60) {
+				hours ++;
+				minutes = 0;
+			}
+		}
+		if (inSafetyStop) {
+			if (depth <= safetyStopLowDepth && depth >= safetyStopHighDepth) {
+				safetyTimeLeft --;
+			}
+			if (safetyTimeLeft == 0) {
+				inSafetyStop = 0;
+			}
+		}
+	}
+	measure();
+	if (alertingAscentRate || alertingNoStopTime) {
+		alert();
+	}
+}
+
+void setCalibrationCoeffs() { //called once in the beginning
+	
+}
+void measure() { //gets sensor raw values and converts them to depth and temperature
+	previousDepthReading = depth;
+	
+	//TODO: call for D1 conversion
+	//TODO: read ADC result
+	//TODO: call for D2 conversion
+	//TODO: read ADC result
+	
+	//dummy values so i dont get compiler errors for now:
+	unsigned int D1 = 0;
+	unsigned int D2 = 0;
+	//the calculations they give us on the datasheet
+	int dT = calibration_coeffs[5] * pow(2, 8);
+	int temp = 2000 + dT * calibration_coeffs[6] / pow(2, 23);
+	long off = calibration_coeffs[2] * pow(2,16) + (calibration_coeffs[4] * dT) / pow(2,7);
+	long sens = calibration_coeffs[1] * pow(2, 15) + (calibration_coeffs[3] * dT) / pow(2,8);
+	pressure = (D1 * sens / pow(2, 21) - off) / pow(2,15);
+	//conversion to nicer units
+	temp /= 100; //temp is now in C
+	//TODO: verify that this works, may need to calibrate manually
+	depth = (pressure * 10000) / water_density / g;//in meters
+	depth = 3.28084 * depth; //depth is now in ft
+	handleNewMeasurements();
+}
+
+void handleNewMeasurements() {
+	if (!currentlyDiving) {
+		if (depth < 4) {
+			return;
+		}
+		//start dive at 4 ft at set time to 0
+		currentlyDiving = 1;
+		hours = 0;
+		minutes = 0;
+		seconds = 0;
+		maximumDepth = depth;
+	}
+	if (depth > maximumDepth) {
+		maximumDepth = depth;
+	}
+	if (!requiresSafetyStop && depth > requireSafetyStopAfterDepth) {
+		requiresSafetyStop = 1;
+	}
+	if (requiresSafetyStop && depth <= safetyStopLowDepth) {
+		requiresSafetyStop = 0;
+		inSafetyStop = 1;
+		safetyTimeLeft = safetyStopTime;
+	}
+	if (previousDepthReading > depth) { //ascending
+		if (requiresSafetyStop && depth <= safetyStopLowDepth) {
+			inSafetyStop = 1;
+		}
+		if (previousDepthReading - depth > 1) {
+			alertingAscentRate = 1;
+		}
+	}
+	if (alertingAscentRate && previousDepthReading - depth <= 1) {
+		alertingAscentRate = 0;
+	}
+	noStopTime = calculateNoStopTime();
+	if (noStopTime <= 0) {
+		alertingNoStopTime = 1;
+	}
+	if (alertingNoStopTime && noStopTime > 0) {
+		alertingNoStopTime = 0;
+	}
+}
+
+int calculateNoStopTime() {
+	
+}
+
+void alert() {
+	//TODO: handle alert by beeping
+}
+
+void displayDiveScreen() {
+	sprintf(str, "%l C", temp);
+	LCD_drawString(0, 0, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	sprintf(str, "%l ft", depth);
+	LCD_drawString(0, 10, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	sprintf(str, "%l pressure", pressure);
+	LCD_drawString(0, 20, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	sprintf(str, "%l hrs", hours);
+	LCD_drawString(0, 30, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	sprintf(str, "%l min", minutes);
+	LCD_drawString(0, 40, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	sprintf(str, "%l s", seconds);
+	LCD_drawString(0, 50, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	sprintf(str, "%l max ft", maximumDepth);
+	LCD_drawString(0, 60, str, rgb565(0, 0, 0), rgb565(255, 255, 255));
+	if (alertingAscentRate) {
+		//TODO: a visual alert i.e. a red boarder
+	}
+}
+
+int main(void)
+{
+	Initialize();
+    while (1) {
+		displayDiveScreen();
+    }
+}
+
